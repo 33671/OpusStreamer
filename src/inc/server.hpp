@@ -6,7 +6,6 @@
 #include <memory>
 #include "circular_buffer.h"
 using boost::asio::ip::tcp;
-using namespace std::chrono_literals;
 
 class AsyncAudioServer {
 public:
@@ -15,16 +14,11 @@ public:
         , acceptor_(io_context, tcp::endpoint(tcp::v4(), port))
         , socket_(io_context)
         , timer_(io_context)
-        , audio_buffer_(audio_buffer)
         , sending_(false)
+        , audio_buffer_broadcaster_(audio_buffer)
         , work_guard_(boost::asio::make_work_guard(io_context))
     {
         start_accept();
-    }
-
-    ~AsyncAudioServer()
-    {
-        thread_pool_.join();
     }
 
 private:
@@ -94,7 +88,7 @@ private:
     }
     std::vector<uint8_t> buffer_pop()
     {
-        auto audio_20ms = audio_buffer_->pop();
+        auto audio_20ms = audio_buffer_broadcaster_->pop();
         return audio_20ms; 
     }
     void handle_pop_result_async(std::vector<uint8_t> audio_20ms)
@@ -128,7 +122,7 @@ private:
     boost::asio::steady_timer timer_;
     std::string input_buffer_;
     bool sending_;
-    CircularBuffer<std::vector<uint8_t>>* audio_buffer_;
+    CircularBuffer<std::vector<uint8_t>>* audio_buffer_broadcaster_;
 
     boost::asio::thread_pool thread_pool_ { 4 }; // create thread pool
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard_;

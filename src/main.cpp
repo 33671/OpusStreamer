@@ -3,18 +3,26 @@
 #include "inc/utils.h"
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
+#include <chrono>
 #include <fstream>
+#include <iostream>
 #include <opus/opus.h>
 #include <portaudio.h>
 #include <samplerate.h>
 #include <sndfile.h>
 #include <thread>
 int encode_opus(const char* file, const char* outputfile);
+using namespace std::chrono_literals;
 int main(int argc, char* argv[])
 {
-    auto buffer = std::make_unique<CircularBuffer<std::vector<uint8_t>>>(MILLS_AHEAD / 20);
-    std::thread producer(encode_producer, "HIPzjIa4nT", buffer.get());
+    // encode_opus("silence.wav","test1.bin");
+    // return 0;
+    auto buffer = std::make_shared<CircularBufferBroadcast<std::vector<uint8_t>>>(MILLS_AHEAD / 20);
+    std::thread producer(encode_producer, "test1.bin", buffer.get());
+    // auto bufffer_reader = buffer.get()->subscribe();
     // std::thread consumer(audio_consumer, buffer.get());
+    std::this_thread::sleep_for(2s);
+
     try {
         boost::asio::io_context io_context;
         AsyncAudioServer server(io_context, 8080, buffer.get());
@@ -51,20 +59,15 @@ int encode_opus(const char* file, const char* outputfile)
     }
 
     // Prepare to read and encode in chunks
-    int framesPerChunk = static_cast<int>(FRAME_SIZE); // 20ms worth of frames
+    auto framesPerChunk = static_cast<int>(FRAME_SIZE); // 20ms worth of frames
     std::vector<opus_int16> inputBuffer(framesPerChunk * CHANNELS);
     static unsigned char outputBuffer[255]; // Max size for Opus packet
 
     sf_count_t readFrames;
     std::ofstream binstream(outputfile, std::ios::binary);
     std::ofstream length_record("length_record.txt");
-    int i = 100;
     while ((readFrames = sf_readf_short(inputSndFile, inputBuffer.data(), framesPerChunk)) > 0) {
         int numBytes = opus_encode(enc, inputBuffer.data(), framesPerChunk, outputBuffer, 255);
-        if (i > 0) {
-            std::cout << "length:" << numBytes << std::endl;
-            i--;
-        }
         if (numBytes < 0) {
             // std::cerr << "length:" << readFrames << std::endl;
             std::cerr << "Opus encoding error: " << opus_strerror(numBytes) << std::endl;

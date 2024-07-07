@@ -1,5 +1,7 @@
 #include <condition_variable>
+#include <functional>
 #include <iostream>
+#include <list>
 #include <mutex>
 #include <vector>
 #ifndef CIRCULAR_BUFFER
@@ -7,7 +9,7 @@
 template <typename T>
 class CircularBuffer {
 public:
-    CircularBuffer(size_t size)
+    explicit CircularBuffer(size_t size)
         : buffer(size)
         , head(0)
         , tail(0)
@@ -62,7 +64,8 @@ public:
         return item;
     }
 
-   size_t size() const {
+    size_t size() const
+    {
         std::unique_lock<std::mutex> lock(mutex);
         if (full) {
             return buffer.size();
@@ -84,5 +87,43 @@ private:
     mutable std::mutex mutex;
     std::condition_variable cond_not_full;
     std::condition_variable cond_not_empty;
+};
+
+template <typename T>
+class CircularBufferBroadcast {
+public:
+    explicit CircularBufferBroadcast(size_t ring_size)
+        : ring_size_(ring_size)
+    {
+    }
+    void broadcast(const T& item)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        for (auto buff : subscribers_) {
+            buff->push_no_wait(item);
+        }
+        lock.unlock();
+    }
+    CircularBuffer<T>* subscribe()
+    {
+        auto buffer = new CircularBuffer<T>(ring_size_);
+        // auto buff = buffer.get();
+        // buff->push_no_wait(T(30));
+        std::unique_lock<std::mutex> lock(mutex);
+        subscribers_.push_back(buffer);
+        lock.unlock();
+        return buffer;
+    }
+    void unsubscire(CircularBuffer<T>* buffer)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        subscribers_.remove(buffer);
+        lock.unlock();
+    }
+
+private:
+    size_t ring_size_;
+    std::list<CircularBuffer<T>*> subscribers_;
+    mutable std::mutex mutex;
 };
 #endif

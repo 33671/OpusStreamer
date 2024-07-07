@@ -8,7 +8,7 @@
 
 std::string gen_random(const int len)
 {
-    srand(time(0));
+    srand(time(nullptr));
     static const char alphanum[] = "0123456789"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "abcdefghijklmnopqrstuvwxyz";
@@ -55,7 +55,7 @@ void audio_consumer(CircularBuffer<std::vector<opus_int16>>* buffer)
     Pa_CloseStream(stream);
     Pa_Terminate();
 }
-void encode_producer(const char* filename,CircularBuffer<std::vector<uint8_t>>* buffer)
+void encode_producer(const char* filename,CircularBufferBroadcast<std::vector<uint8_t>>* buffer)
 {
     // Initialize Opus decoder
     /*int error;
@@ -89,27 +89,30 @@ void encode_producer(const char* filename,CircularBuffer<std::vector<uint8_t>>* 
                 std::cerr<< "File Read Error"<< std::endl;;
                 break;
             }
-            int bytesRead = infile.gcount();
+            auto bytesRead = infile.gcount();
             encodedData.resize(bytesRead);
-            buffer->push_no_wait(encodedData);
+            //buffer->push_no_wait(encodedData);
+            buffer->broadcast(encodedData);
+            //printf("1");
             sent_frames_count++;
             auto now = steady_clock::now();
             auto elapsed = duration_cast<milliseconds>(now - start).count();
             auto frames_shoud_send_count = elapsed / 20;
-            //printf("Frames should sent:%lld", frames_shoud_send_count);
             long long int frame_bias = frames_shoud_send_count - sent_frames_count;
             if (frame_bias < (MILLS_AHEAD / 20)) // 2000ms/20ms send rate limit 
             {
                //printf("Sleeping\n");
                std::this_thread::sleep_for(20ms);
             }
-            //std::this_thread::sleep_for(200ms);
-            //printf("Continueing\n");
             //printf("Frames bias:%lld\n", );
         }
         else
         {
-            printf("File Reading Complete\n");
+            auto now = steady_clock::now();
+            auto elapsed = duration_cast<milliseconds>(now - start).count();
+            printf("File Reading Complete,Time Elapsed:%ld secs\n",elapsed / 1000);
+            //buffer->push_no_wait(std::vector<uint8_t>(0));
+            buffer->broadcast(std::vector<uint8_t>(0));
             break;
         }
     }

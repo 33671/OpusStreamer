@@ -11,6 +11,6 @@
 constexpr auto MILLS_AHEAD = 2000;
 typedef std::string string;
 std::string gen_random(const int len);
-void encode_producer(const char* filename,CircularBuffer<std::vector<uint8_t>>* buffer);
-void audio_consumer(CircularBuffer<std::vector<opus_int16>>* buffer); 
+void encode_producer(const char* filename, CircularBufferBroadcast<std::vector<uint8_t>>* buffer);
+void audio_consumer(CircularBuffer<std::vector<opus_int16>>* buffer);
 #endif
