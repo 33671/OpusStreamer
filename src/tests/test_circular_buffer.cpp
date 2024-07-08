@@ -1,6 +1,7 @@
 #define BOOST_TEST_MODULE CircularBufferTest
 #include <boost/test/included/unit_test.hpp>
 #include "../inc/circular_buffer.h"
+#include "../inc/opus_frame.hpp"
 BOOST_AUTO_TEST_CASE(test_push_pop) {
     CircularBuffer<int> buffer(3);
 
@@ -32,22 +33,22 @@ BOOST_AUTO_TEST_CASE(test_push_no_wait) {
 }
 
 BOOST_AUTO_TEST_CASE(test_size) {
-    CircularBuffer<int> buffer(3);
+    CircularBuffer<OpusFrame> buffer(3,OpusFrame(3));
 
-    BOOST_CHECK_EQUAL(buffer.size(), 0);
-    buffer.push(1);
-    BOOST_CHECK_EQUAL(buffer.size(), 1);
-    buffer.push(2);
-    BOOST_CHECK_EQUAL(buffer.size(), 2);
-    buffer.push(3);
-    BOOST_CHECK_EQUAL(buffer.size(), 3);
+    BOOST_CHECK_EQUAL(buffer.queue_size(), 0);
+    buffer.push(OpusFrame(3));
+    BOOST_CHECK_EQUAL(buffer.queue_size(), 1);
+    buffer.push(OpusFrame(2));
+    BOOST_CHECK_EQUAL(buffer.queue_size(), 2);
+    buffer.push(OpusFrame(100));
+    BOOST_CHECK_EQUAL(buffer.queue_size(), 3);
 
     buffer.pop();
-    BOOST_CHECK_EQUAL(buffer.size(), 2);
+    BOOST_CHECK_EQUAL(buffer.queue_size(), 2);
     buffer.pop();
-    BOOST_CHECK_EQUAL(buffer.size(), 1);
-    buffer.pop();
-    BOOST_CHECK_EQUAL(buffer.size(), 0);
+    BOOST_CHECK_EQUAL(buffer.queue_size(), 1);
+    auto item =buffer.pop();
+    BOOST_CHECK_EQUAL(item.size(), 100);
 }
 
 BOOST_AUTO_TEST_CASE(test_is_empty_is_full) {

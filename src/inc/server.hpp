@@ -1,10 +1,7 @@
+#include "circular_buffer.h"
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
-#include <chrono>
 #include <iostream>
-#include <set>
-#include <memory>
-#include "circular_buffer.h"
 using boost::asio::ip::tcp;
 
 class AsyncAudioServer {
@@ -33,7 +30,7 @@ private:
             start_read();
         } else {
             std::cerr << "Accept error: " << error.message() << std::endl;
-            start_accept(); 
+            start_accept();
         }
     }
 
@@ -77,26 +74,26 @@ private:
             if (sending_) {
                 start_write();
                 // set ms timer
-                //timer_.expires_after(200ms);
-                //timer_.async_wait(boost::bind(&AsyncAudioServer::handle_timer, this, boost::asio::placeholders::error));
+                // timer_.expires_after(200ms);
+                // timer_.async_wait(boost::bind(&AsyncAudioServer::handle_timer, this, boost::asio::placeholders::error));
             }
         } else {
             std::cerr << "Write error: " << error.message() << std::endl;
             // socket_.close();
-            start_accept(); 
+            start_accept();
         }
     }
     std::vector<uint8_t> buffer_pop()
     {
         auto audio_20ms = audio_buffer_broadcaster_->pop();
-        return audio_20ms; 
+        return audio_20ms;
     }
     void handle_pop_result_async(std::vector<uint8_t> audio_20ms)
     {
         std::cout << "Blocking operation result: " << audio_20ms.size() << std::endl;
 
         std::vector<boost::asio::const_buffer> audio_buffers;
-        audio_buffers.push_back(boost::asio::buffer({static_cast<uint8_t>(audio_20ms.size())}));
+        audio_buffers.push_back(boost::asio::buffer({ static_cast<uint8_t>(audio_20ms.size()) }));
         audio_buffers.push_back(boost::asio::buffer(audio_20ms));
         boost::asio::async_write(socket_, audio_buffers,
             boost::bind(&AsyncAudioServer::handle_write, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));

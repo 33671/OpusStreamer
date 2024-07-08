@@ -1,11 +1,14 @@
 #include "../inc/utils.h"
+#include <chrono>
+#include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <memory>
 #include <opus/opus.h>
 #include <portaudio.h>
-#include <random>
-#include <chrono>
-#include <fstream>
 #include <thread>
-
+#include <vector>
+#include "../inc/opus_frame.hpp"
 std::string gen_random(const int len)
 {
     srand(time(nullptr));
@@ -41,10 +44,10 @@ void audio_consumer(CircularBuffer<std::vector<opus_int16>>* buffer)
     err = Pa_StartStream(stream);
     check_pa_error(err);
     // Play audio
-    while(true)
-    {
+    while (true) {
         auto decodedData = buffer->pop();
-        if (decodedData.size() == 0) break;
+        if (decodedData.size() == 0)
+            break;
         auto err = Pa_WriteStream(stream, decodedData.data(), decodedData.size());
         if (err != paNoError) {
             std::cerr << "PortAudio WriteStream error: " << Pa_GetErrorText(err) << std::endl;
@@ -55,7 +58,7 @@ void audio_consumer(CircularBuffer<std::vector<opus_int16>>* buffer)
     Pa_CloseStream(stream);
     Pa_Terminate();
 }
-void encode_producer(const char* filename,CircularBufferBroadcast<std::vector<uint8_t>>* buffer)
+void encode_producer(const char* filename, std::shared_ptr<CircularBufferBroadcast<OpusFrame>> broadcaster)
 {
     // Initialize Opus decoder
     /*int error;
@@ -73,65 +76,62 @@ void encode_producer(const char* filename,CircularBufferBroadcast<std::vector<ui
     }
 
     // Buffer for encoded and decoded data
-    
+
     using namespace std::chrono;
     auto start = steady_clock::now();
     size_t sent_frames_count = 0;
     uint8_t size_c[1] {};
     while (true) {
-        std::vector<unsigned char> encodedData(255); // Maximum size for 20ms frame
-        //encodedData.reserve(255);
+        OpusFrame encodedData(255); // Maximum size for 20ms frame
         if (infile.read((char*)size_c, 1)) {
-            int size_to_read = (uint8_t)size_c[0];
-            //printf("Length:%d", size_to_read);
-            if(!infile.read(reinterpret_cast<char*>(encodedData.data()), size_to_read))
-            {
-                std::cerr<< "File Read Error"<< std::endl;;
+            auto size_to_read = (uint8_t)size_c[0];
+            // printf("Length:%d", size_to_read);
+            if (!infile.read(reinterpret_cast<char*>(encodedData.data_ptr()), size_to_read)) {
+                std::cerr << "File Read Error" << std::endl;
+                ;
                 break;
             }
             auto bytesRead = infile.gcount();
             encodedData.resize(bytesRead);
-            //buffer->push_no_wait(encodedData);
-            buffer->broadcast(encodedData);
-            //printf("1");
+            // buffer->push_no_wait(encodedData);
+            broadcaster->broadcast(encodedData);
+            // printf("1");
             sent_frames_count++;
             auto now = steady_clock::now();
             auto elapsed = duration_cast<milliseconds>(now - start).count();
             auto frames_shoud_send_count = elapsed / 20;
             long long int frame_bias = frames_shoud_send_count - sent_frames_count;
-            if (frame_bias < (MILLS_AHEAD / 20)) // 2000ms/20ms send rate limit 
+            if (frame_bias < (MILLS_AHEAD / 20)) // 2000ms/20ms send rate limit
             {
-               //printf("Sleeping\n");
-               std::this_thread::sleep_for(20ms);
+                // printf("Sleeping\n");
+                std::this_thread::sleep_for(20ms);
             }
-            //printf("Frames bias:%lld\n", );
-        }
-        else
-        {
+            // printf("Frames bias:%lld\n", );
+        } else {
             auto now = steady_clock::now();
             auto elapsed = duration_cast<milliseconds>(now - start).count();
-            printf("File Reading Complete,Time Elapsed:%ld secs\n",elapsed / 1000);
-            //buffer->push_no_wait(std::vector<uint8_t>(0));
-            buffer->broadcast(std::vector<uint8_t>(0));
+            printf("File Reading Complete,Time Elapsed:%lld secs\n", elapsed / 1000);
+            // buffer->push_no_wait(std::vector<uint8_t>(0));
+            broadcaster->broadcast(OpusFrame(0));
             break;
         }
     }
-    
-    //while () {
-        //std::vector<unsigned char> encodedData(255); // Maximum size for 20ms frame
-        // Decode Opus data
-        //std::vector<opus_int16> decodedData(FRAME_SIZE * CHANNELS);
-        //int frame_size = opus_decode(decoder, encodedData.data(), bytesRead, decodedData.data(), FRAME_SIZE, 0);
-        //if (frame_size < 0) {
-        //    std::cerr << "Decoding failed: " << opus_strerror(frame_size) << std::endl;
-        //    opus_decoder_ctl(decoder, OPUS_RESET_STATE);
-        //    continue;
-        //    // infile.close();
-        //    // break;
-        //}
+
+    // while () {
+    // std::vector<unsigned char> encodedData(255); // Maximum size for 20ms frame
+    //  Decode Opus data
+    // std::vector<opus_int16> decodedData(FRAME_SIZE * CHANNELS);
+    // int frame_size = opus_decode(decoder, encodedData.data(), bytesRead, decodedData.data(), FRAME_SIZE, 0);
+    // if (frame_size < 0) {
+    //     std::cerr << "Decoding failed: " << opus_strerror(frame_size) << std::endl;
+    //     opus_decoder_ctl(decoder, OPUS_RESET_STATE);
+    //     continue;
+    //     // infile.close();
+    //     // break;
+    // }
     //}
 
     // Cleanup
     infile.close();
-    //opus_decoder_destroy(decoder);
+    // opus_decoder_destroy(decoder);
 }

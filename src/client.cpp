@@ -1,8 +1,7 @@
-#include "inc/utils.h"
+#include "./inc/utils.h"
 #include "inc/circular_buffer.h"
 #include <iostream>
 #include <fstream>
-#include <vector>
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
 
@@ -20,7 +19,7 @@ public:
     void send(const std::string& message) {
         boost::asio::post(io_context_, boost::bind(&AsyncTCPClient::do_send, this, message));
     }
-
+    std::ofstream file_{"output.bin", std::ios::binary};
 private:
     void start_connect() {
         tcp::resolver resolver(io_context_);
@@ -64,6 +63,7 @@ private:
             start_read();
         } else if (error != boost::asio::error::eof) {
             std::cerr << "Read error: " << error.message() << std::endl;
+            io_context_.stop();
         }
     }
 
@@ -72,7 +72,7 @@ private:
     std::string server_;
     short port_;
     std::array<char, 1024> read_buffer_;
-    std::ofstream file_{"output.bin", std::ios::binary};
+    
 };
 
 int main() {
@@ -80,6 +80,8 @@ int main() {
         boost::asio::io_context io_context;
         AsyncTCPClient client(io_context, "127.0.0.1", 8080);
         io_context.run();
+        client.file_.flush();
+        client.file_.close();
     } catch (std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }

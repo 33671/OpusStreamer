@@ -1,5 +1,5 @@
 add_rules("mode.debug", "mode.release")
-add_requires("libopus 1.5.2","libsamplerate latest","libsndfile latest","libogg latest","ffmpeg latest","portaudio latest","boost latest")
+add_requires("libopus latest","libsamplerate latest","libsndfile latest","portaudio latest","boost latest","minimp3 latest")
 set_defaultmode("debug")
 add_headerfiles("src/inc/*.hpp","src/inc/*.h")
 set_languages("c17", "c++17")
@@ -13,11 +13,11 @@ target("OpusStreamer")
     -- add_links("C:\\gstreamer\\1.0\\msvc_x86_64\\lib\\*")
     add_files("src/main.cpp")
     add_files("src/lib/*.cpp")
-    add_packages("libopus","libsamplerate","libsndfile","portaudio","boost")
+    add_packages("libopus","libsamplerate","libsndfile","portaudio","boost","minimp3")
     
 target("UnitTests")
     set_kind("binary")
-    add_packages("libopus","libsamplerate","libsndfile","portaudio","boost")
+    add_packages("libopus","libsamplerate","libsndfile","portaudio","boost","minimp3")
     add_files("src/tests/*.cpp")
     add_files("src/lib/*.cpp")
 
@@ -25,8 +25,12 @@ target("OpusClient")
     set_kind("binary")
     add_files("src/client.cpp")
     add_files("src/lib/*.cpp")
-    add_packages("libopus","libsamplerate","libsndfile","portaudio","boost")
---
+    add_packages("libopus","libsamplerate","libsndfile","portaudio","boost","minimp3")
+target("OpusClient2")
+    set_kind("binary")
+    add_files("src/client2.cpp")
+    add_files("src/lib/*.cpp")
+    add_packages("libopus","libsamplerate","libsndfile","portaudio","boost","minimp3")
 -- If you want to known more usage about xmake, please see https://xmake.io
 --
 -- ## FAQ

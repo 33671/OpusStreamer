@@ -3,7 +3,6 @@
 #include "inc/utils.h"
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <opus/opus.h>
@@ -11,28 +10,29 @@
 #include <samplerate.h>
 #include <sndfile.h>
 #include <thread>
+#include "inc/opus_frame.hpp"
 int encode_opus(const char* file, const char* outputfile);
+boost::asio::thread_pool ClientSession::thread_pool_(4);
 using namespace std::chrono_literals;
 int main(int argc, char* argv[])
 {
-    // encode_opus("silence.wav","test1.bin");
-    // return 0;
-    auto buffer = std::make_shared<CircularBufferBroadcast<std::vector<uint8_t>>>(MILLS_AHEAD / 20);
-    std::thread producer(encode_producer, "test1.bin", buffer.get());
+    //encode_opus("filename.wav","test.bin");
+    //return 0;
+    auto buffer = std::make_shared<CircularBufferBroadcast<OpusFrame>>(MILLS_AHEAD / 20);
+    std::thread producer(encode_producer, "test.bin", buffer);
     // auto bufffer_reader = buffer.get()->subscribe();
     // std::thread consumer(audio_consumer, buffer.get());
-    std::this_thread::sleep_for(2s);
 
     try {
         boost::asio::io_context io_context;
-        AsyncAudioServer server(io_context, 8080, buffer.get());
+        AsyncAudioServer server(io_context, 8080, buffer);
         io_context.run();
     } catch (std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }
 
-    producer.join();
-    // consumer.join();
+    // producer.join();
+    //  consumer.join();
     return 0;
 }
 

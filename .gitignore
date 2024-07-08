@@ -6,5 +6,6 @@ vsxmake2022/
 *.wav
 # MacOS Cache
 .DS_Store
-
-
+.cache/
+compile_commands.json
+*.bin
