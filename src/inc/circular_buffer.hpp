@@ -1,3 +1,4 @@
+﻿#include <atomic>
 #include <condition_variable>
 #include <list>
 #include <memory>
@@ -5,10 +6,15 @@
 #include <vector>
 #ifndef CIRCULAR_BUFFER
 #define CIRCULAR_BUFFER
+class BufferClosedException : public std::runtime_error {
+public:
+    explicit BufferClosedException(const std::string& message)
+        : std::runtime_error(message) {}
+};
 template <typename T>
 class CircularBuffer {
 public:
-    CircularBuffer(size_t size)
+    explicit CircularBuffer(size_t size)
         : buffer(size)
         , head(0)
         , tail(0)
@@ -16,13 +22,13 @@ public:
         , size_(size)
     {
     }
-     CircularBuffer(size_t size,const T& place_holder)
+    CircularBuffer(size_t size, const T& place_holder)
         : head(0)
         , tail(0)
         , full(false)
         , size_(size)
     {
-        buffer = std::vector<T>(size,place_holder);
+        buffer = std::vector<T>(size, place_holder);
     }
 
     CircularBuffer(const CircularBuffer&) = delete;
@@ -32,7 +38,10 @@ public:
     void push(const T& item)
     {
         std::unique_lock<std::mutex> lock(mutex);
-        cond_not_full.wait(lock, [this] { return !full; });
+        cond_not_full.wait(lock, [this] { return !full || exit_flag.load(); });
+        if (exit_flag.load()) {
+            throw BufferClosedException("Aborted");
+        }
 
         buffer[head] = item;
         head = (head + 1) % buffer.size();
@@ -60,8 +69,10 @@ public:
     T pop()
     {
         std::unique_lock<std::mutex> lock(mutex);
-        cond_not_empty.wait(lock, [this] { return !is_empty(); });
-
+        cond_not_empty.wait(lock, [this] { return !is_empty() || exit_flag.load(); });
+        if (exit_flag.load()) {
+            throw BufferClosedException("Aborted");
+        }
         T item = buffer[tail];
         tail = (tail + 1) % buffer.size();
         full = false;
@@ -70,6 +81,13 @@ public:
         cond_not_full.notify_one();
 
         return item;
+    }
+    void abort()
+    {
+        printf("Aborting\n");
+        exit_flag.store(true);
+        cond_not_empty.notify_all();
+        cond_not_full.notify_all();
     }
 
     size_t queue_size() const
@@ -93,8 +111,10 @@ public:
     bool is_empty() const { return (!full && (head == tail)); }
 
 private:
+    std::atomic_bool exit_flag { false };
     std::vector<T> buffer;
     size_t head;
+
     size_t tail;
     size_t size_;
     bool full;
@@ -119,7 +139,7 @@ public:
     }
     std::shared_ptr<CircularBuffer<T>> subscribe()
     {
-        auto buffer = std::make_shared<CircularBuffer<T>>(ring_size_,255);
+        auto buffer = std::make_shared<CircularBuffer<T>>(ring_size_, 255);
         // std::unique_lock<std::mutex> lock(mutex);
         subscribers_.push_back(buffer);
         return buffer;
@@ -127,6 +147,7 @@ public:
     void unsubscire(std::shared_ptr<CircularBuffer<T>> buffer)
     {
         // std::unique_lock<std::mutex> lock(mutex);
+        buffer->abort();
         subscribers_.remove(buffer);
     }
 

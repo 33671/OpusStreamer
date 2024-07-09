@@ -1,4 +1,4 @@
-#include "circular_buffer.h"
+#include "circular_buffer.hpp"
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
 #include <iostream>
@@ -31,10 +31,10 @@ private:
     {
         if (!error) {
             {
-                std::unique_lock<std::shared_mutex> lock(mutex_);
+                // std::unique_lock<std::shared_mutex> lock(mutex_);
                 sessions_.insert(session);
             }
-            session->start();
+            session->start_read();
             start_accept();
         } else {
             std::cerr << "Accept error: " << error.message() << std::endl;
@@ -43,7 +43,7 @@ private:
 
     void remove_session(std::shared_ptr<ClientSession> session)
     {
-        std::unique_lock<std::shared_mutex> lock(mutex_);
+        // std::unique_lock<std::shared_mutex> lock(mutex_);
         sessions_.erase(session);
         // TODO: ???
         printf("Session Removed,Current Sessions:%zu\n", sessions_.size());
@@ -53,5 +53,5 @@ private:
     tcp::acceptor acceptor_;
     std::shared_ptr<CircularBufferBroadcast<OpusFrame>> audio_buffer_broadcaster_;
     std::set<std::shared_ptr<ClientSession>> sessions_;
-    std::shared_mutex mutex_;
+    // std::shared_mutex mutex_;
 };

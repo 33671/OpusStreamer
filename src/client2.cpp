@@ -1,6 +1,6 @@
 #include "boost/asio/read_until.hpp"
 #include "boost/asio/streambuf.hpp"
-#include "inc/circular_buffer.h"
+#include "inc/circular_buffer.hpp"
 #include "inc/opus_frame.hpp"
 #include "inc/utils.h"
 #include <boost/asio.hpp>
@@ -190,18 +190,18 @@ int main(int argc, char* argv[])
 {
     auto buffer = std::make_shared<CircularBuffer<OpusFrame>>(MILLS_AHEAD / 20 + 500);
     std::thread consumer(audio_consumer, buffer);
-    try {
-        boost::asio::io_service io_service;
-        TcpClient client(io_service, "127.0.0.1", "8080", buffer);
-        client.send("send\n");
-        io_service.run();
-        printf("Disconnected");
-        client.file_.flush();
-        // consumer.join();
-    } catch (std::exception& e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
-        return 1;
-    }
-
+    boost::asio::io_service io_service;
+    TcpClient client(io_service, "127.0.0.1", "8080", buffer);
+    client.send("send\n");
+    io_service.run();
+    printf("Disconnected");
+    client.file_.flush();
+    // try {
+    //     // consumer.join();
+    // } catch (std::exception& e) {
+    //     std::cerr << "Exception: " << e.what() << std::endl;
+    //     return 1;
+    // }
+    consumer.join();
     return 0;
 }

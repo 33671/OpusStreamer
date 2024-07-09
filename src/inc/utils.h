@@ -1,4 +1,4 @@
-﻿#include "../inc/circular_buffer.h"
+﻿#include "../inc/circular_buffer.hpp"
 #include <opus/opus_types.h>
 #include "../inc/opus_frame.hpp"
 #ifndef UTILS
