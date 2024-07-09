@@ -12,14 +12,13 @@ public:
         : data(vec)
     {
     }
-    // OpusFrame()
-    // {
-    //     printf("here");
-    //     this->data = std::make_shared<std::vector<uint8_t>>(255);
-    // }
+    OpusFrame()
+    {
+        data = std::make_shared<std::vector<uint8_t>>(0);
+    }
     OpusFrame(const size_t size)
     {
-        this->data = std::make_shared<std::vector<uint8_t>>(size);
+        data = std::make_shared<std::vector<uint8_t>>(size);
     }
     OpusFrame(std::initializer_list<uint8_t> initList)
         : data(std::make_shared<std::vector<uint8_t>>(initList))
@@ -29,14 +28,21 @@ public:
     {
         return data->data();
     }
-
+    void clear()
+    {
+        data->clear();
+    }
+    void push_back(const uint8_t& item)
+    {
+        data->push_back(item);
+    }
     size_t size()
     {
         return data->size();
     }
-    void resize(const size_t _Newsize)
+    void resize(const size_t size)
     {
-        data->resize(_Newsize);
+        data->resize(size);
     }
 
     const std::vector<uint8_t>& vector() const

@@ -112,30 +112,27 @@ public:
     }
     void broadcast(const T& item)
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        // std::unique_lock<std::mutex> lock(mutex);
         for (auto buff : subscribers_) {
             buff.get()->push_no_wait(item);
         }
-        lock.unlock();
     }
     std::shared_ptr<CircularBuffer<T>> subscribe()
     {
-        auto buffer = std::make_shared<CircularBuffer<T>>(ring_size_,OpusFrame(0));
-        std::unique_lock<std::mutex> lock(mutex);
+        auto buffer = std::make_shared<CircularBuffer<T>>(ring_size_,255);
+        // std::unique_lock<std::mutex> lock(mutex);
         subscribers_.push_back(buffer);
-        lock.unlock();
         return buffer;
     }
     void unsubscire(std::shared_ptr<CircularBuffer<T>> buffer)
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        // std::unique_lock<std::mutex> lock(mutex);
         subscribers_.remove(buffer);
-        lock.unlock();
     }
 
 private:
     size_t ring_size_;
     std::list<std::shared_ptr<CircularBuffer<T>>> subscribers_;
-    mutable std::mutex mutex;
+    // mutable std::mutex mutex;
 };
 #endif

@@ -21,10 +21,10 @@ public:
 private:
     void start_accept()
     {
-        auto new_session = std::make_shared<ClientSession>(io_context_, audio_buffer_broadcaster_,
+        auto session = std::make_shared<ClientSession>(io_context_, audio_buffer_broadcaster_,
             std::bind(&AsyncAudioServer::remove_session, this, std::placeholders::_1));
-        acceptor_.async_accept(new_session->socket(),
-            boost::bind(&AsyncAudioServer::handle_accept, this, new_session, boost::asio::placeholders::error));
+        acceptor_.async_accept(session->socket(),
+            boost::bind(&AsyncAudioServer::handle_accept, this, session, boost::asio::placeholders::error));
     }
 
     void handle_accept(std::shared_ptr<ClientSession> session, const boost::system::error_code& error)

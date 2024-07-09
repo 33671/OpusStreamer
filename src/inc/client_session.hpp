@@ -77,10 +77,13 @@ private:
     void start_buffer_pop_async()
     {
         auto self = shared_from_this();
-        boost::asio::post(thread_pool_, [this, self]() {
+        boost::asio::post(thread_pool_, [this, self]() mutable {
+            auto a = 1;
             OpusFrame audio_20ms = audio_buffer_->pop();
             if (audio_20ms.size() == 0)
-                close();
+            {
+                audio_buffer_broadcaster_->unsubscire(audio_buffer_);
+            }
             boost::asio::post(io_context_, boost::bind(&ClientSession::handle_pop_result_async, self, audio_20ms));
         });
     }
@@ -89,9 +92,10 @@ private:
     {
         if (sending_) {
             std::vector<boost::asio::const_buffer> audio_buffers_prepared;
-            audio_buffers_prepared.push_back(boost::asio::buffer({'B','E','G','I','N',' '}));
+            audio_buffers_prepared.push_back(boost::asio::buffer({'B','E','G','I','N'}));
             audio_buffers_prepared.push_back(boost::asio::buffer({ static_cast<uint8_t>(audio_20ms.size()) }));
             audio_buffers_prepared.push_back(boost::asio::buffer(audio_20ms.vector()));
+            audio_buffers_prepared.push_back(boost::asio::buffer({'E','N','D'}));
             boost::asio::async_write(socket_, audio_buffers_prepared,
                 boost::bind(&ClientSession::handle_write, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
         }
