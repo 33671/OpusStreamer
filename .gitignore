@@ -10,3 +10,4 @@ vsxmake2022/
 compile_commands.json
 *.bin
 *.mp3
+backup/

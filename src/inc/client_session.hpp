@@ -1,21 +1,23 @@
-﻿#include "circular_buffer.hpp"
+﻿#include "../circular_buffer.hpp"
 #include "opus_frame.hpp"
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
+#include <cstdio>
 #include <iostream>
 #include <memory>
+#include <optional>
 #ifndef CLIENTSESSION
 #define CLIENTSESSION
 using boost::asio::ip::tcp;
 class ClientSession : public std::enable_shared_from_this<ClientSession> {
 public:
-    ClientSession(boost::asio::io_context& io_context, std::shared_ptr<CircularBufferBroadcast<OpusFrame>> audio_buffer_broadcaster, std::function<void(std::shared_ptr<ClientSession>)> on_disconnect)
+    ClientSession(boost::asio::io_context& io_context, std::shared_ptr<CircularBufferBroadcast<std::optional<OpusFrame>>> audio_buffer_broadcaster)
         : audio_buffer_broadcaster_(audio_buffer_broadcaster)
         , io_context_(io_context)
         , socket_(io_context)
         , sending_(false)
-        , on_disconnect_(on_disconnect)
     {
+        // boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard = boost::asio::make_work_guard(io_context);
     }
 
     tcp::socket& socket()
@@ -49,12 +51,16 @@ private:
             input_buffer_.erase(0, bytes_transferred);
 
             if (message.find("send") != std::string::npos) {
-                start_sending();
-            } else if (message.find("pause") != std::string::npos) {
-                close();
+                if (!sending_) {
+                    start_sending();
+                }
             }
-
+            // else if (message.find("pause") != std::string::npos) {
+            //     close();
+            // }
+            // if (!sending_) {
             start_read();
+            // }
         } else {
             std::cerr << "Read error: " << error.message() << std::endl;
             close();
@@ -70,21 +76,28 @@ private:
 
     void start_buffer_pop_async()
     {
-        auto self = shared_from_this();
-        boost::asio::post(thread_pool_, [this, self]() mutable {
-            OpusFrame audio_20ms;
-            try {
-                // printf("1");
-                audio_20ms = audio_buffer_->pop();
-                // printf("2");
-            } catch (...) {
-                return;
+        // auto self = shared_from_this();
+        auto weakSelf = weak_from_this();
+        // boost::asio::post(thread_pool_, [this, self]() {
+        boost::asio::post(thread_pool_, [weakSelf]() {
+            if (auto sharedSelf = weakSelf.lock()) {
+                auto self = sharedSelf;
+                std::optional<OpusFrame> audio_20ms;
+                try {
+                    audio_20ms = self->audio_buffer_->pop();
+                } catch (BufferClosedException& e) {
+                    printf("Thread Blocking Aborted\n");
+                    return;
+                }
+                if (!audio_20ms.has_value()) {
+                    self->audio_buffer_broadcaster_->unsubscire(self->audio_buffer_);
+                    printf("Streaming Finished\n");
+                    return;
+                }
+                boost::asio::post(self->io_context_, boost::bind(&ClientSession::handle_pop_result_async, self, audio_20ms.value()));
+            } else {
+                printf("Error Object Destroyed\n");
             }
-            if (audio_20ms.size() == 0) {
-                audio_buffer_broadcaster_->unsubscire(audio_buffer_);
-            }
-            boost::asio::post(io_context_, boost::bind(&ClientSession::handle_pop_result_async, self, audio_20ms));
-
         });
     }
 
@@ -92,8 +105,10 @@ private:
     {
         if (sending_) {
             std::vector<boost::asio::const_buffer> audio_buffers_prepared;
-            audio_buffers_prepared.push_back(boost::asio::buffer({ 'B', 'E', 'G', 'I', 'N' }));
+            audio_buffers_prepared.push_back(boost::asio::buffer({ 'S', 'T', 'A' }));
+            // audio_buffers_prepared.push_back(boost::asio::buffer({ 'B', 'E', 'G', 'I', 'N' }));
             audio_buffers_prepared.push_back(boost::asio::buffer({ static_cast<uint8_t>(audio_20ms.size()) }));
+            // printf("%zu ",audio_20ms.size());
             audio_buffers_prepared.push_back(boost::asio::buffer(audio_20ms.vector()));
             audio_buffers_prepared.push_back(boost::asio::buffer({ 'E', 'N', 'D' }));
             boost::asio::async_write(socket_, audio_buffers_prepared,
@@ -107,32 +122,26 @@ private:
             start_write();
         } else {
             std::cerr << "Write error: " << error.message() << std::endl;
-            audio_buffer_broadcaster_->unsubscire(audio_buffer_);
+            sending_ = false;
             // close();
-            if (on_disconnect_) {
-                on_disconnect_(shared_from_this());
-            }
         }
     }
 
     void close()
     {
+        sending_ = false;
         try {
-            // socket_.close();
+            socket_.close();
             audio_buffer_broadcaster_->unsubscire(audio_buffer_);
-            if (on_disconnect_) {
-                on_disconnect_(shared_from_this());
-            }
         } catch (...) {
         };
     }
-    std::shared_ptr<CircularBuffer<OpusFrame>> audio_buffer_;
-    std::shared_ptr<CircularBufferBroadcast<OpusFrame>> audio_buffer_broadcaster_;
+    std::shared_ptr<CircularBuffer<std::optional<OpusFrame>>> audio_buffer_;
+    std::shared_ptr<CircularBufferBroadcast<std::optional<OpusFrame>>> audio_buffer_broadcaster_;
     boost::asio::io_context& io_context_;
     tcp::socket socket_;
     std::string input_buffer_;
     bool sending_;
-    std::function<void(std::shared_ptr<ClientSession>)> on_disconnect_;
 
     static boost::asio::thread_pool thread_pool_;
 };

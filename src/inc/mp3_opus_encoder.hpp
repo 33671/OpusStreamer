@@ -1,17 +1,17 @@
 ﻿#include <iostream>
+#include <optional>
 #include <vector>
 #include <fstream>
 #include "opus_frame.hpp"
 #include <opus/opus.h>
 #include <samplerate.h>
 #include <string>
-#include "utils.h"
 #ifndef MP3OPSUDECODER
 #define MP3OPSUDECODER
+#include "utils.h"
 #define MINIMP3_IMPLEMENTATION
-#include <minimp3_ex.h>
 #include <minimp3.h>
-
+#include <minimp3_ex.h>
 class Mp3OpusEncoder {
 public:
     Mp3OpusEncoder(const std::string& filename) {
@@ -51,9 +51,9 @@ public:
         src_delete(src_state);
     }
 
-    OpusFrame getNextOpusFrame() {
+    std::optional<OpusFrame> getNextOpusFrame() {
         if (currentSampleIndex >= info.samples) {
-            return OpusFrame(); // 返回空向量表示结束
+            return std::nullopt; // 返回空向量表示结束
         }
 
         std::vector<float> monoPcm(frameSize); // 单声道缓冲区
@@ -82,10 +82,8 @@ public:
             auto err_s = string(src_strerror(error));
             throw std::runtime_error("SRC processing failed: " + err_s);
         }
-        bool s = false;
+
         if (srcData.output_frames_gen < resampledFrameSize) {
-            //DebugBreak();
-            s = true;
             resampledPcm.resize(resampledFrameSize, 0);
             //resampledIntPcm.resize(srcData.output_frames_gen);
         }
