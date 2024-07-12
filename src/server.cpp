@@ -1,6 +1,6 @@
-﻿#include "inc/circular_buffer.hpp"
-#include "inc/server.hpp"
-#include "inc/utils.h"
+﻿#include "../include/circular_buffer.hpp"
+#include "../include/server.hpp"
+#include "../include/utils.hpp"
 #include <optional>
 #include <thread>
 

@@ -1,6 +1,5 @@
-﻿#include "inc/audio_recorder.hpp"
-#include <boost/asio.hpp>
-#include "inc/server.hpp"
+﻿#include "../include/server.hpp"
+#include "../include/audio_recorder.hpp"
 boost::asio::thread_pool ClientSession::thread_pool_(4);
 int main()
 {

@@ -1,6 +1,5 @@
 ﻿#ifndef MP3OPSUDECODER
 #define MP3OPSUDECODER
-#include "utils.h"
 #include "opus_frame.hpp"
 #include <fstream>
 #include <iostream>
@@ -9,6 +8,7 @@
 #include <opus/opus_types.h>
 #include <samplerate.h>
 #include <string>
+#include "defines.hpp"
 #define MINIMP3_IMPLEMENTATION
 #include <minimp3.h>
 #include <minimp3_ex.h>
@@ -86,7 +86,7 @@ public:
 
         int error = src_process(src_state, &srcData);
         if (error) {
-            auto err_s = string(src_strerror(error));
+            auto err_s = std::string(src_strerror(error));
             throw std::runtime_error("SRC processing failed: " + err_s);
         }
 
@@ -98,7 +98,7 @@ public:
         int opusBytes = opus_encode_float(encoder, resampledPcm.data(), resampledFrameSize, opusData.data_ptr(), opusData.size());
 
         if (opusBytes < 0) {
-            auto error = string(opus_strerror(opusBytes));
+            auto error = std::string(opus_strerror(opusBytes));
             throw std::runtime_error("Opus encoding failed: " + error);
         }
 

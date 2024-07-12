@@ -1,13 +1,12 @@
-﻿#include "circular_buffer.hpp"
+﻿#ifndef CLIENTSESSION
+#define CLIENTSESSION
+#include "asio_include.hpp"
+#include "circular_buffer.hpp"
 #include "opus_frame.hpp"
-#include <boost/asio.hpp>
-#include <boost/bind/bind.hpp>
 #include <cstdio>
 #include <iostream>
 #include <memory>
 #include <optional>
-#ifndef CLIENTSESSION
-#define CLIENTSESSION
 using boost::asio::ip::tcp;
 class ClientSession : public std::enable_shared_from_this<ClientSession> {
 public:
@@ -55,9 +54,9 @@ private:
                     start_sending();
                 }
             }
-            // else if (message.find("pause") != std::string::npos) {
-            //     close();
-            // }
+            else if (message.find("pause") != std::string::npos) {
+                sending_ = false;
+            }
             // if (!sending_) {
             start_read();
             // }

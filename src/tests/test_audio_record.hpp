@@ -1,7 +1,7 @@
 ﻿#include <chrono>
 #include <thread>
 #include <boost/test/included/unit_test.hpp>
-#include "../inc/audio_recorder.hpp"
+#include "../../include/audio_recorder.hpp"
 BOOST_AUTO_TEST_CASE(audio_record)
 {
     auto buffer = std::make_shared<CircularBufferBroadcast<std::optional<OpusFrame>>>(5000 / 20);

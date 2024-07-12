@@ -1,9 +1,9 @@
-﻿#include "boost/asio/read_until.hpp"
-#include "boost/asio/streambuf.hpp"
+﻿#ifndef TCP_AUDIO_CLIENT
+#define TCP_AUDIO_CLIENT
+#include "asio_include.hpp"
 #include "circular_buffer.hpp"
 #include "opus_frame.hpp"
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
+
 #include <iostream>
 #include <iterator>
 #include <memory>
@@ -31,6 +31,11 @@ public:
     {
         boost::asio::post(io_service_, boost::bind(&TcpClient::do_send, this, message));
     }
+    void send(const std::vector<boost::asio::const_buffer>& buffer)
+    {
+        boost::asio::write(socket_, buffer);
+        // boost::asio::post(io_service_, boost::bind(&TcpClient::do_send_buffer, this, std::ref(buffer)));
+    }
     enum class ReadState {
         ToSearchStart,
         ToReadLength,
@@ -46,6 +51,11 @@ private:
         boost::asio::async_write(socket_, buffers,
             boost::bind(&TcpClient::handle_write, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
     }
+    void do_send_buffer(const std::vector<boost::asio::const_buffer>& message)
+    {
+        boost::asio::async_write(socket_, message,
+            boost::bind(&TcpClient::handle_write, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+    }
     void start_read_to_end()
     {
         boost::asio::async_read_until(socket_, buffer_, end_marker,
@@ -56,7 +66,7 @@ private:
     void handle_write(const boost::system::error_code& error, std::size_t /*bytes_transferred*/)
     {
         if (!error) {
-            std::cout << "Data sent to server." << std::endl;
+            std::cout << "1" << " ";
         } else {
             std::cerr << "Write error: " << error.message() << std::endl;
             socket_.close();
@@ -178,3 +188,4 @@ private:
     std::uint8_t frame_length = 0;
     std::shared_ptr<CircularBuffer<OpusFrame>> frames_buffer_;
 };
+#endif

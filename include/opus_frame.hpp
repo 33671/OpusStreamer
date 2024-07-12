@@ -1,11 +1,11 @@
+#ifndef OPUSFRAME
+#define OPUSFRAME
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
 #include <memory>
 #include <vector>
-#ifndef  OPUSFRAME
-#define OPUSFRAME
 class OpusFrame {
 public:
     OpusFrame(const std::shared_ptr<std::vector<uint8_t>>& vec)

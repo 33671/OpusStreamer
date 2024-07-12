@@ -1,4 +1,7 @@
-﻿#include "utils.h"
+﻿#ifndef AUDIO_RECORDER
+#define AUDIO_RECORDER
+#include "circular_buffer.hpp"
+#include "utils.hpp"
 #include <cstdio>
 #include <iostream>
 #include <memory>
@@ -6,7 +9,6 @@
 #include <opus/opus.h>
 #include <portaudio.h>
 #include <vector>
-#include "circular_buffer.hpp"
 #define SAMPLE_SIZE 2 // 16-bit PCM
 #define PA_SAMPLE_TYPE paInt16
 typedef short SAMPLE;
@@ -27,25 +29,30 @@ public:
 
     bool start()
     {
-        PaError err = Pa_Initialize();
-        if (err != paNoError) {
-            std::cerr << "PortAudio error: " << Pa_GetErrorText(err) << std::endl;
-            return false;
+        PaError err;
+        if (!IS_PORTAUDIO_INITIALIZED) {
+            err = Pa_Initialize();
+            if (err != paNoError) {
+                std::cerr << "PortAudio init error: " << Pa_GetErrorText(err) << std::endl;
+                return false;
+            }
+            IS_PORTAUDIO_INITIALIZED = true;
         }
+        // PaError err = Pa_Initialize();
 
         err = Pa_OpenDefaultStream(&stream, CHANNELS, 0, PA_SAMPLE_TYPE, SAMPLE_RATE, FRAME_SIZE, [](const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) -> int {
                 AudioRecorder *recorder = static_cast<AudioRecorder*>(userData);
                 return recorder->recordCallback(inputBuffer, framesPerBuffer); }, this);
 
         if (err != paNoError) {
-            std::cerr << "PortAudio error: " << Pa_GetErrorText(err) << std::endl;
+            std::cerr << "PortAudio open stream error: " << Pa_GetErrorText(err) << std::endl;
             Pa_Terminate();
             return false;
         }
 
         err = Pa_StartStream(stream);
         if (err != paNoError) {
-            std::cerr << "PortAudio error: " << Pa_GetErrorText(err) << std::endl;
+            std::cerr << "PortAudio start stream error: " << Pa_GetErrorText(err) << std::endl;
             Pa_CloseStream(stream);
             Pa_Terminate();
             return false;
@@ -98,3 +105,4 @@ private:
         return paContinue;
     }
 };
+#endif

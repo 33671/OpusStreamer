@@ -1,11 +1,11 @@
-﻿#include <atomic>
+﻿#ifndef CIRCULAR_BUFFER
+#define CIRCULAR_BUFFER
+#include <atomic>
 #include <condition_variable>
 #include <list>
 #include <memory>
 #include <mutex>
 #include <vector>
-#ifndef CIRCULAR_BUFFER
-#define CIRCULAR_BUFFER
 class BufferClosedException : public std::runtime_error {
 public:
     explicit BufferClosedException(const std::string& message)

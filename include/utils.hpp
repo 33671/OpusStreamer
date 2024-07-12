@@ -1,15 +1,14 @@
-#include "../inc/utils.h"
-#include "../inc/opus_frame.hpp"
-#include <chrono>
-#include <cstdint>
+﻿#ifndef UTILS
+#define UTILS
+#include "circular_buffer.hpp"
+#include "defines.hpp"
+#include "mp3_opus_encoder.hpp"
+#include "opus_frame.hpp"
 #include <fstream>
-#include <iostream>
-#include <memory>
+#include <optional>
 #include <opus/opus.h>
 #include <portaudio.h>
-#include <thread>
-#include <vector>
-#include "../inc/mp3_opus_encoder.hpp"
+using string = std::string;
 using namespace std::chrono;
 std::string gen_random(const int len)
 {
@@ -29,10 +28,11 @@ std::string gen_random(const int len)
 static void check_pa_error(PaError err)
 {
     if (err != paNoError) {
-        std::cerr << "PortAudio error: " << Pa_GetErrorText(err) << std::endl;
+        std::cerr << "PortAudio output error: " << Pa_GetErrorText(err) << std::endl;
         exit(1);
     }
 }
+static bool IS_PORTAUDIO_INITIALIZED = false;
 void audio_consumer(std::shared_ptr<CircularBuffer<OpusFrame>> frames_receiver)
 {
     // std::this_thread::sleep_for(10000ms);
@@ -43,9 +43,12 @@ void audio_consumer(std::shared_ptr<CircularBuffer<OpusFrame>> frames_receiver)
         std::cerr << "Failed to create Opus decoder: " << opus_strerror(error) << std::endl;
         return;
     }
-    PaError err = Pa_Initialize();
-    check_pa_error(err);
-
+    PaError err;
+    if (!IS_PORTAUDIO_INITIALIZED) {
+        err = Pa_Initialize();
+        check_pa_error(err);
+        IS_PORTAUDIO_INITIALIZED = true;
+    }
     // Open an audio I/O stream
     PaStream* stream;
     err = Pa_OpenDefaultStream(&stream, 0, CHANNELS, paInt16, SAMPLE_RATE, FRAME_SIZE, nullptr, nullptr);
@@ -111,7 +114,7 @@ void encode_producer(const char* opus_filename, std::shared_ptr<CircularBufferBr
             sent_frames_count++;
             auto now = steady_clock::now();
             auto elapsed = duration_cast<milliseconds>(now - start).count();
-            auto frames_shoud_send_count = (elapsed + MILLS_AHEAD)/ 20;
+            auto frames_shoud_send_count = (elapsed + MILLS_AHEAD) / 20;
             long long int frame_bias = frames_shoud_send_count - sent_frames_count;
             if (frame_bias < 0) // send rate limit
             {
@@ -151,7 +154,7 @@ void mp3_encode_producer(const char* filename, std::shared_ptr<CircularBufferBro
         sent_frames_count++;
         auto now = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(now - start).count();
-        auto frames_shoud_send_count = (elapsed + MILLS_AHEAD)/ 20;
+        auto frames_shoud_send_count = (elapsed + MILLS_AHEAD) / 20;
         long long int frame_bias = frames_shoud_send_count - sent_frames_count;
         if (frame_bias < 0) // send rate limit
         {
@@ -160,3 +163,5 @@ void mp3_encode_producer(const char* filename, std::shared_ptr<CircularBufferBro
         }
     }
 }
+
+#endif

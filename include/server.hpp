@@ -1,12 +1,12 @@
+#ifndef AUDIO_SERVER
+#define AUDIO_SERVER
+#include "client_session.hpp"
 #include "circular_buffer.hpp"
-#include <boost/asio.hpp>
-#include <boost/bind/bind.hpp>
+#include "opus_frame.hpp"
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <set>
-#include "opus_frame.hpp"
-#include "client_session.hpp"
 using boost::asio::ip::tcp;
 
 class AsyncAudioServer {
@@ -54,3 +54,4 @@ private:
     std::set<std::shared_ptr<ClientSession>> sessions_;
     // std::shared_mutex mutex_;
 };
+#endif

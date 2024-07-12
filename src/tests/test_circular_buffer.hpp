@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE CircularBufferTest
 #include <boost/test/included/unit_test.hpp>
-#include "../inc/circular_buffer.hpp"
-#include "../inc/opus_frame.hpp"
+#include "../../include/circular_buffer.hpp"
+#include "../../include/opus_frame.hpp"
 BOOST_AUTO_TEST_CASE(test_push_pop) {
     CircularBuffer<int> buffer(3);
 
