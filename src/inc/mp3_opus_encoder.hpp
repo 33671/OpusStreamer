@@ -1,8 +1,7 @@
 ﻿#ifndef MP3OPSUDECODER
 #define MP3OPSUDECODER
-#include "../inc/utils.h"
+#include "utils.h"
 #include "opus_frame.hpp"
-#include <exception>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -10,7 +9,6 @@
 #include <opus/opus_types.h>
 #include <samplerate.h>
 #include <string>
-#include <vector>
 #define MINIMP3_IMPLEMENTATION
 #include <minimp3.h>
 #include <minimp3_ex.h>
@@ -66,7 +64,7 @@ public:
         if (audio_channels == 2) {
             for (int i = 0; i < frameSize; ++i) {
                 if (currentSampleIndex + i * 2 < info.samples) {
-                    monoPcm[i] = info.buffer[currentSampleIndex + i * 2] / 32768.0f; // 只使用左声道
+                    monoPcm[i] = info.buffer[currentSampleIndex + i * 2] / 32768.0f; // encode left channel only
                 }
             }
         } else if (audio_channels == 1) {
@@ -74,7 +72,7 @@ public:
                 monoPcm[i] = info.buffer[i] / 32768.0f;
             }
         } else {
-            throw std::exception("Audio channels not support");
+            throw std::runtime_error("Audio channels not support");
         }
         std::vector<float> resampledPcm(resampledFrameSize);
 

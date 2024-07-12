@@ -1,4 +1,4 @@
-﻿#include "circular_buffer.hpp"
+﻿#include "inc/circular_buffer.hpp"
 #include "inc/server.hpp"
 #include "inc/utils.h"
 #include <optional>
@@ -8,8 +8,6 @@ boost::asio::thread_pool ClientSession::thread_pool_(4);
 using namespace std::chrono_literals;
 int main(int argc, char* argv[])
 {
-    //encode_opus("filename.wav","test.bin");
-    //return 0;
     auto buffer = std::make_shared<CircularBufferBroadcast<std::optional<OpusFrame>>>(MILLS_AHEAD / 20);
     // std::thread producer(encode_producer, "test.bin", buffer);
     // std::thread producer(mp3_encode_producer, "30-seconds-of-silence.mp3", buffer);
@@ -19,13 +17,7 @@ int main(int argc, char* argv[])
     boost::asio::io_context io_context;
     AsyncAudioServer server(io_context, 8080, buffer);
     io_context.run();
-   /* try {
-        
-    } catch (std::exception& e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
-    }*/
 
     producer.join();
-    //  consumer.join();
     return 0;
 }

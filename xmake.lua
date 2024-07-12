@@ -11,7 +11,7 @@ target("server")
     -- add_includedirs("C:\\gstreamer\\1.0\\msvc_x86_64\\lib\\glib-2.0\\include",{public = true})
     -- add_includedirs("C:\\gstreamer\\1.0\\msvc_x86_64\\include",{public = true})
     -- add_links("C:\\gstreamer\\1.0\\msvc_x86_64\\lib\\*")
-    add_files("src/main.cpp")
+    add_files("src/server.cpp")
     add_files("src/lib/*.cpp")
     add_packages("libopus","libsamplerate","portaudio","boost","minimp3")
     

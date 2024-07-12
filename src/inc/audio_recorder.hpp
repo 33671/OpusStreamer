@@ -6,7 +6,7 @@
 #include <opus/opus.h>
 #include <portaudio.h>
 #include <vector>
-#include "../circular_buffer.hpp"
+#include "circular_buffer.hpp"
 #define SAMPLE_SIZE 2 // 16-bit PCM
 #define PA_SAMPLE_TYPE paInt16
 typedef short SAMPLE;

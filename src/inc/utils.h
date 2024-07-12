@@ -1,7 +1,7 @@
 ﻿#ifndef UTILS
 #define UTILS
-#include "../circular_buffer.hpp"
-#include "../inc/opus_frame.hpp"
+#include "circular_buffer.hpp"
+#include "opus_frame.hpp"
 #include <optional>
 #define SAMPLE_RATE 16000
 #define CHANNELS 1
