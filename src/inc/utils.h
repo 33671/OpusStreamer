@@ -1,9 +1,8 @@
-﻿#include "../circular_buffer.tpp"
-#include <opus/opus_types.h>
+﻿#ifndef UTILS
+#define UTILS
+#include "../circular_buffer.hpp"
 #include "../inc/opus_frame.hpp"
 #include <optional>
-#ifndef UTILS
-#define UTILS
 #define SAMPLE_RATE 16000
 #define CHANNELS 1
 #define FRAME_SIZE (SAMPLE_RATE / 50) // 20ms frames

@@ -1,20 +1,23 @@
-﻿#include <iostream>
-#include <optional>
-#include <vector>
-#include <fstream>
+﻿#ifndef MP3OPSUDECODER
+#define MP3OPSUDECODER
+#include "../inc/utils.h"
 #include "opus_frame.hpp"
+#include <exception>
+#include <fstream>
+#include <iostream>
+#include <optional>
 #include <opus/opus.h>
+#include <opus/opus_types.h>
 #include <samplerate.h>
 #include <string>
-#ifndef MP3OPSUDECODER
-#define MP3OPSUDECODER
-#include "utils.h"
+#include <vector>
 #define MINIMP3_IMPLEMENTATION
 #include <minimp3.h>
 #include <minimp3_ex.h>
 class Mp3OpusEncoder {
 public:
-    Mp3OpusEncoder(const std::string& filename) {
+    Mp3OpusEncoder(const std::string& filename)
+    {
         // 读取MP3文件
         mp3Data = readFile(filename);
 
@@ -35,38 +38,44 @@ public:
         // 配置Opus编码参数
         // opus_encoder_ctl(encoder, OPUS_SET_BITRATE(bitrate));
         mp3_sample_rate = info.hz;
+        audio_channels = info.channels;
         // 初始化索引
         currentSampleIndex = 0;
         frameSize = mp3_sample_rate * 0.02; // 20ms * 48kHz = 960
         resampledFrameSize = SAMPLE_RATE * 0.02; // 20ms * 16kHz = 320
-         // 初始化重采样器
+                                                 // 初始化重采样器
         src_state = src_new(SRC_SINC_FASTEST, 1, &error);
         if (src_state == NULL) {
             throw std::runtime_error("Failed to create SRC state: " + std::to_string(error));
         }
     }
 
-    ~Mp3OpusEncoder() {
+    ~Mp3OpusEncoder()
+    {
         opus_encoder_destroy(encoder);
         src_delete(src_state);
     }
 
-    std::optional<OpusFrame> getNextOpusFrame() {
+    std::optional<OpusFrame> getNextOpusFrame()
+    {
         if (currentSampleIndex >= info.samples) {
             return std::nullopt; // 返回空向量表示结束
         }
 
         std::vector<float> monoPcm(frameSize); // 单声道缓冲区
-        for (int i = 0; i < frameSize; ++i) {
-            if (currentSampleIndex + i * 2 < info.samples) {
-                monoPcm[i] = info.buffer[currentSampleIndex + i * 2] / 32768.0f; // 只使用左声道
+        if (audio_channels == 2) {
+            for (int i = 0; i < frameSize; ++i) {
+                if (currentSampleIndex + i * 2 < info.samples) {
+                    monoPcm[i] = info.buffer[currentSampleIndex + i * 2] / 32768.0f; // 只使用左声道
+                }
             }
+        } else if (audio_channels == 1) {
+            for (int i = 0; i < frameSize; ++i) {
+                monoPcm[i] = info.buffer[i] / 32768.0f;
+            }
+        } else {
+            throw std::exception("Audio channels not support");
         }
-        // 重采样
-        // std::vector<float> floatPcm(frameSize);
-        // for (int i = 0; i < frameSize; ++i) {
-        //     floatPcm[i] = static_cast<float>(monoPcm[i]) / 32768.0f; // 将 int16_t 转换为 float
-        // }
         std::vector<float> resampledPcm(resampledFrameSize);
 
         SRC_DATA srcData;
@@ -85,13 +94,7 @@ public:
 
         if (srcData.output_frames_gen < resampledFrameSize) {
             resampledPcm.resize(resampledFrameSize, 0);
-            //resampledIntPcm.resize(srcData.output_frames_gen);
         }
-
-        // std::vector<int16_t> resampledIntPcm(resampledFrameSize);
-        // for (int i = 0; i < resampledFrameSize; ++i) {
-        //     resampledIntPcm[i] = static_cast<int16_t>(resampledPcm[i] * 32768.0);
-        // }
 
         OpusFrame opusData(255);
         int opusBytes = opus_encode_float(encoder, resampledPcm.data(), resampledFrameSize, opusData.data_ptr(), opusData.size());
@@ -103,12 +106,12 @@ public:
 
         currentSampleIndex += frameSize * 2;
         opusData.resize(opusBytes);
-        // auto x =std::vector<uint8_t>(opusData.begin(), opusData.begin() + opusBytes);
         return opusData;
     }
 
 private:
-    std::vector<uint8_t>* readFile(const std::string& filename) {
+    std::vector<uint8_t>* readFile(const std::string& filename)
+    {
         std::ifstream file(filename, std::ios::binary);
         if (!file.is_open()) {
             throw std::runtime_error("Could not open file: " + filename);
@@ -131,10 +134,11 @@ private:
     std::vector<uint8_t>* mp3Data;
     OpusEncoder* encoder;
     SRC_STATE* src_state;
-    
+
     int currentSampleIndex;
     int frameSize;
     int resampledFrameSize;
     int mp3_sample_rate;
+    int audio_channels;
 };
 #endif

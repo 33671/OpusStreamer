@@ -1,5 +1,4 @@
 #include "../inc/utils.h"
-#include "../inc/mp3_opus_encoder.hpp"
 #include "../inc/opus_frame.hpp"
 #include <chrono>
 #include <cstdint>
@@ -10,6 +9,7 @@
 #include <portaudio.h>
 #include <thread>
 #include <vector>
+#include "../inc/mp3_opus_encoder.hpp"
 using namespace std::chrono;
 std::string gen_random(const int len)
 {
