@@ -4,6 +4,7 @@
 #include "defines.hpp"
 #include "mp3_opus_encoder.hpp"
 #include "opus_frame.hpp"
+#include "spin_lock.hpp"
 #include <fstream>
 #include <optional>
 #include <opus/opus.h>
@@ -32,6 +33,7 @@ static void check_pa_error(PaError err)
         exit(1);
     }
 }
+static SpinLock PORTAUDIO_INIT_LOCK{};
 static bool IS_PORTAUDIO_INITIALIZED = false;
 void audio_consumer(std::shared_ptr<CircularBuffer<OpusFrame>> frames_receiver)
 {
@@ -44,11 +46,14 @@ void audio_consumer(std::shared_ptr<CircularBuffer<OpusFrame>> frames_receiver)
         return;
     }
     PaError err;
+    
+    PORTAUDIO_INIT_LOCK.lock();
     if (!IS_PORTAUDIO_INITIALIZED) {
         err = Pa_Initialize();
-        check_pa_error(err);
         IS_PORTAUDIO_INITIALIZED = true;
+        check_pa_error(err);
     }
+    PORTAUDIO_INIT_LOCK.unlock();
     // Open an audio I/O stream
     PaStream* stream;
     err = Pa_OpenDefaultStream(&stream, 0, CHANNELS, paInt16, SAMPLE_RATE, FRAME_SIZE, nullptr, nullptr);

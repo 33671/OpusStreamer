@@ -17,7 +17,7 @@ void record(TcpClient& client)
             std::vector<boost::asio::const_buffer> audio_buffers_prepared;
             audio_buffers_prepared.push_back(boost::asio::buffer({ 'S', 'T', 'A' }));
             audio_buffers_prepared.push_back(boost::asio::buffer({ static_cast<uint8_t>(result->size()) }));
-            printf("%zu ",result->size());
+            // printf("%zu ",result->size());
             audio_buffers_prepared.push_back(boost::asio::buffer(result->vector()));
             audio_buffers_prepared.push_back(boost::asio::buffer({ 'E', 'N', 'D' }));
             client.send(audio_buffers_prepared);

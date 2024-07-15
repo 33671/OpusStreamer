@@ -98,6 +98,7 @@ private:
 
     void process_data(std::size_t bytes_transferred)
     {
+        // std::cout << "Reading Data" << std::endl;
         boost::asio::streambuf::const_buffers_type bufs = buffer_.data();
         auto buf_begin = boost::asio::buffers_begin(bufs);
         auto buf_end = boost::asio::buffers_end(bufs);
@@ -143,7 +144,6 @@ private:
                     break;
                 }
             } else if (read_state_ == ReadState::ToReadData) {
-                // std::cout << "Reading Data" << std::endl;
                 OpusFrame opus_frame;
                 // std::cerr << "opus_frame Length"<<opus_frame.size() << std::endl;
                 int read_times = frame_length;
@@ -162,7 +162,7 @@ private:
                 }
                 if (read_times != 0) {
                     std::cerr << "Dirty Data Read:" << buffer_.size() << std::endl;
-                    read_state_ = TcpClient::ReadState::ToSearchStart;
+                    read_state_ = ReadState::ToSearchStart;
                     buffer_.consume(buffer_.size());
                     // DebugBreak();s
                     break;
@@ -173,7 +173,7 @@ private:
                     std::cerr << "Read Data Size Not Match, Buffer:" << opus_frame.size() << " Frame Length:" << (int)frame_length << std::endl;
                 }
                 buffer_.consume(frame_length + start_marker.size() + end_marker.size() + 1);
-                read_state_ = TcpClient::ReadState::ToSearchStart;
+                read_state_ = ReadState::ToSearchStart;
                 break;
             }
         }

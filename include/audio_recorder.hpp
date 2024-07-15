@@ -30,15 +30,18 @@ public:
     bool start()
     {
         PaError err;
+        PORTAUDIO_INIT_LOCK.lock();
         if (!IS_PORTAUDIO_INITIALIZED) {
             err = Pa_Initialize();
             if (err != paNoError) {
                 std::cerr << "PortAudio init error: " << Pa_GetErrorText(err) << std::endl;
+                IS_PORTAUDIO_INITIALIZED = true;
+                 PORTAUDIO_INIT_LOCK.unlock();
                 return false;
             }
             IS_PORTAUDIO_INITIALIZED = true;
         }
-        // PaError err = Pa_Initialize();
+        PORTAUDIO_INIT_LOCK.unlock();
 
         err = Pa_OpenDefaultStream(&stream, CHANNELS, 0, PA_SAMPLE_TYPE, SAMPLE_RATE, FRAME_SIZE, [](const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData) -> int {
                 AudioRecorder *recorder = static_cast<AudioRecorder*>(userData);

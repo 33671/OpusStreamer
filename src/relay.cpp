@@ -1,72 +1,120 @@
 ﻿#include "../include/asio_include.hpp"
+#include <array>
+#include <cstdio>
 #include <iostream>
 #include <memory>
-#include <array>
+#include <optional>
 
 using boost::asio::ip::tcp;
 
 class TcpRelaySession : public std::enable_shared_from_this<TcpRelaySession> {
 public:
-    TcpRelaySession(boost::asio::io_context& io_context)
-        : socket1_(io_context), socket2_(io_context) {}
-
-    tcp::socket& socket1() { return socket1_; }
-    tcp::socket& socket2() { return socket2_; }
-
-    void start() {
-        do_read(socket1_, buffer1_, socket2_);
-        do_read(socket2_, buffer2_, socket1_);
+    TcpRelaySession(boost::asio::io_context& io_context, std::list<std::shared_ptr<TcpRelaySession>>& sessions)
+        : socket_(io_context)
+        , sessions_(sessions)
+    {
     }
+
+    std::optional<std::shared_ptr<TcpRelaySession>> get_another_session()
+    {
+        for (auto elem : sessions_) {
+            if (elem != shared_from_this()) {
+                return std::optional(elem); // 返回不等于给定值的元素
+            }
+        }
+        return std::nullopt; // 如果没有找到，返回一个错误标记（例如-1）
+    }
+
+    tcp::socket& socket() { return socket_; }
+    // tcp::socket& socket2() { return socket2_; }
+
+    void start()
+    {
+        auto session1 = get_another_session();
+        if (!session1.has_value()) {
+            return;
+        }
+        do_read_async();
+        (*session1)->do_read_async();
+    }
+    tcp::socket socket_;
+    std::array<char, 8192> buffer_;
 
 private:
-    void do_read(tcp::socket& socket, std::array<char, 8192>& buffer, tcp::socket& other_socket) {
+    void do_read_async()
+    {
         auto self(shared_from_this());
-        socket.async_read_some(boost::asio::buffer(buffer),
-            [this, self, &socket, &buffer, &other_socket](boost::system::error_code ec, std::size_t length) {
+        socket_.async_read_some(boost::asio::buffer(buffer_),
+            [this, self](boost::system::error_code ec, std::size_t length) {
                 if (!ec) {
-                    do_write(other_socket, buffer, length);
-                    do_read(socket, buffer, other_socket);
+                    auto session1 = get_another_session();
+                    if (!session1.has_value()) {
+                        return;
+                    }
+                    do_write_async((*session1)->socket_, buffer_, length);
+                    do_read_async();
+                } else {
+                    // printf("Read Error\n");
+                    handle_disconnect(socket_);
                 }
             });
     }
 
-    void do_write(tcp::socket& socket, std::array<char, 8192>& buffer, std::size_t length) {
+    void do_write_async(tcp::socket& socket, std::array<char, 8192>& buffer, std::size_t length)
+    {
         auto self(shared_from_this());
         boost::asio::async_write(socket, boost::asio::buffer(buffer, length),
-            [this, self](boost::system::error_code ec, std::size_t /*length*/) {
+            [this, self, &socket](boost::system::error_code ec, std::size_t /*length*/) {
                 if (!ec) {
                     // Continue writing
+                } else {
+                    // printf("Write Error\n");
+                    handle_disconnect(socket);
                 }
             });
     }
 
-    tcp::socket socket1_;
-    tcp::socket socket2_;
-    std::array<char, 8192> buffer1_;
-    std::array<char, 8192> buffer2_;
+    void handle_disconnect(tcp::socket& socket)
+    {
+        sessions_.remove(shared_from_this());
+        socket.close();
+        // Implement logic to handle reconnections if needed
+        // For example, you could notify the server to accept a new connection
+    }
+
+    std::list<std::shared_ptr<TcpRelaySession>>& sessions_;
 };
 
 class TcpRelayServer {
 public:
     TcpRelayServer(boost::asio::io_context& io_context, short port)
-        : io_context_(io_context),acceptor_(io_context, tcp::endpoint(tcp::v4(), port)) {
+        : io_context_(io_context)
+        , acceptor_(io_context, tcp::endpoint(tcp::v4(), port))
+    {
         start_accept();
     }
 
 private:
-    void start_accept() {
-        auto session = std::make_shared<TcpRelaySession>(io_context_);
-        acceptor_.async_accept(session->socket1(),
+    void start_accept()
+    {
+        auto session = std::make_shared<TcpRelaySession>(io_context_,sessions_);
+        acceptor_.async_accept(session->socket(),
             [this, session](boost::system::error_code ec) {
                 if (!ec) {
-                    acceptor_.async_accept(session->socket2(),
-                        [this, session](boost::system::error_code ec) {
-                            if (!ec) {
-                                session->start();
-                            }
-                            start_accept();
-                        });
+                    std::cout << "Client connected\n";
+                    if (sessions_.size() >= 2) {
+                        while (sessions_.size() <= 1) {
+                            sessions_.front()->socket_.close();
+                            sessions_.pop_front();
+                        }
+                    }
+                    sessions_.push_back(session);
+                    if (sessions_.size() == 2) {
+                        session->start();
+                    }
+                    start_accept();
                 } else {
+                    std::cout << "Error accepting Client 1: " << ec.message() << "\n";
                     start_accept();
                 }
             });
@@ -74,9 +122,11 @@ private:
 
     tcp::acceptor acceptor_;
     boost::asio::io_context& io_context_;
+    std::list<std::shared_ptr<TcpRelaySession>> sessions_;
 };
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     try {
         if (argc != 2) {
             std::cerr << "Usage: tcp_relay_server <port>\n";
