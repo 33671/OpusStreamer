@@ -30,11 +30,11 @@ public:
 
     void start()
     {
+        do_read_async();
         auto session1 = get_another_session();
         if (!session1.has_value()) {
             return;
         }
-        do_read_async();
         (*session1)->do_read_async();
     }
     tcp::socket socket_;
@@ -48,11 +48,11 @@ private:
             [this, self](boost::system::error_code ec, std::size_t length) {
                 if (!ec) {
                     auto session1 = get_another_session();
+                    do_read_async();
                     if (!session1.has_value()) {
                         return;
                     }
                     do_write_async((*session1)->socket_, buffer_, length);
-                    do_read_async();
                 } else {
                     // printf("Read Error\n");
                     handle_disconnect(socket_);
@@ -109,9 +109,9 @@ private:
                         }
                     }
                     sessions_.push_back(session);
-                    if (sessions_.size() == 2) {
-                        session->start();
-                    }
+                    // if (sessions_.size() == 2) {
+                    // }
+                    session->start();
                     start_accept();
                 } else {
                     std::cout << "Error accepting Client 1: " << ec.message() << "\n";
