@@ -7,7 +7,7 @@ void record(TcpClient& client)
 {
     auto audio_broadcaster = std::make_shared<CircularBufferBroadcast<std::optional<OpusFrame>>>(MILLS_AHEAD / 20);
     AudioRecorder recorder(audio_broadcaster);
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     recorder.start();
     auto buffer_reader = audio_broadcaster->subscribe();
     while (true) {

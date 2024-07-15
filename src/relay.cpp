@@ -19,10 +19,10 @@ public:
     {
         for (auto elem : sessions_) {
             if (elem != shared_from_this()) {
-                return std::optional(elem); // 返回不等于给定值的元素
+                return std::optional(elem); 
             }
         }
-        return std::nullopt; // 如果没有找到，返回一个错误标记（例如-1）
+        return std::nullopt;
     }
 
     tcp::socket& socket() { return socket_; }
@@ -103,7 +103,7 @@ private:
                 if (!ec) {
                     std::cout << "Client connected\n";
                     if (sessions_.size() >= 2) {
-                        while (sessions_.size() <= 1) {
+                        while (sessions_.size() > 1) {
                             sessions_.front()->socket_.close();
                             sessions_.pop_front();
                         }
